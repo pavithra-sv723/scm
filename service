@@ -1,0 +1,77 @@
+@Service
+public class OrderServiceImpl implements OrderService {
+
+    @Autowired
+    private InventoryRepository inventoryRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderTrackerRepository orderTrackerRepository;
+
+    @Override
+    @Transactional
+    public List<Order> getOrdersForDc(Long dcId) {
+        return orderRepository.findByDcId(dcId);  // Fetch orders for the specified DC
+    }
+
+    @Override
+    @Transactional
+    public List<Long> getWarehousesForOrder(Long orderId, Long specifiedDcId) {
+        List<Long> warehousesInSpecifiedDc = inventoryRepository.findWarehousesInSpecifiedDc(specifiedDcId, orderId);
+
+        if (!warehousesInSpecifiedDc.isEmpty()) {
+            return warehousesInSpecifiedDc;
+        } else {
+            List<Object[]> warehousesInOtherDc = inventoryRepository.findWarehousesInAnyDc(orderId);
+
+            if (!warehousesInOtherDc.isEmpty()) {
+                List<Long> warehouseIds = new ArrayList<>();
+                for (Object[] result : warehousesInOtherDc) {
+                    Long warehouseId = ((BigInteger) result[1]).longValue();
+                    warehouseIds.add(warehouseId);
+                }
+                return warehouseIds;
+            } else {
+                throw new IllegalStateException("No suitable warehouses found to fulfill the order.");
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void transferOrderToAnotherDc(Long orderId, Long newDcId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        order.setDcId(newDcId);
+        order.setWarehouseId(null);  // Reset warehouse to null when transferring to another DC
+        orderRepository.save(order);
+
+        // Add status for the order transfer
+        OrderTracker orderTracker = new OrderTracker();
+        orderTracker.setStatus("TRANSFERRED");
+        orderTracker.setStatusDate(LocalDateTime.now());
+        orderTracker.setOrder(order);
+        orderTrackerRepository.save(orderTracker);
+    }
+
+    @Override
+    @Transactional
+    public void assignDcAndWarehouse(Long orderId, Long specifiedDcId, Long warehouseId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with ID: " + orderId));
+
+        order.setDcId(specifiedDcId);
+        order.setWarehouseId(warehouseId);
+        orderRepository.save(order);
+
+        // Add status for assigning warehouse
+        OrderTracker orderTracker = new OrderTracker();
+        orderTracker.setStatus("ASSIGNED");
+        orderTracker.setStatusDate(LocalDateTime.now());
+        orderTracker.setOrder(order);
+        orderTrackerRepository.save(orderTracker);
+    }
+}
