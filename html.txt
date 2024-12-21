@@ -1,0 +1,34 @@
+<div class="container">
+  <h2>Orders for DC Manager</h2>
+
+  <div *ngFor="let order of orders">
+    <div>
+      <p>Order ID: {{ order.id }} | Status: {{ order.status }}</p>
+
+      <button *ngIf="order.status === 'TRANSFERRED'" (click)="checkWarehouses(order.id)">Check Warehouses</button>
+
+      <div *ngIf="availableWarehouses.length > 0">
+        <label for="warehouseSelect">Select Warehouse:</label>
+        <select id="warehouseSelect" [(ngModel)]="selectedWarehouseId" class="form-control">
+          <option *ngFor="let warehouse of availableWarehouses" [value]="warehouse">
+            Warehouse ID: {{ warehouse }}
+          </option>
+        </select>
+        <button (click)="assignWarehouse()" class="btn btn-primary mt-3">Assign Warehouse</button>
+      </div>
+
+      <div *ngIf="otherDcList.length > 0">
+        <button (click)="searchOtherDc()">Search Other DCs</button>
+        <div *ngIf="otherDcList.length > 0">
+          <label for="dcSelect">Select DC:</label>
+          <select id="dcSelect" [(ngModel)]="transferDcId" class="form-control">
+            <option *ngFor="let dc of otherDcList" [value]="dc.id">
+              DC ID: {{ dc.id }}
+            </option>
+          </select>
+          <button (click)="transferOrder()" class="btn btn-secondary mt-3">Transfer Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

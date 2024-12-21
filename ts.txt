@@ -1,0 +1,54 @@
+import { Component, OnInit } from '@angular/core';
+import { OrderService } from './order.service';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-dc-manager-warehouse',
+  templateUrl: './dc-manager-warehouse.component.html',
+  styleUrls: ['./dc-manager-warehouse.component.css']
+})
+export class DcManagerWarehouseComponent implements OnInit {
+  dcId: number;
+  orderId: number;
+  availableWarehouses: any[] = [];
+  selectedWarehouseId: number;
+  statusMessage: string;
+
+  constructor(
+    private orderService: OrderService,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit() {
+    // Get DC and Order IDs from route parameters
+    this.dcId = +this.route.snapshot.paramMap.get('dcId')!;
+    this.orderId = +this.route.snapshot.paramMap.get('orderId')!;
+    this.fetchWarehouses();
+  }
+
+  fetchWarehouses() {
+    this.orderService.getWarehousesForOrder(this.orderId, this.dcId).subscribe({
+      next: (warehouses) => {
+        this.availableWarehouses = warehouses;
+      },
+      error: (err) => {
+        this.statusMessage = 'Error fetching warehouses: ' + err.message;
+      }
+    });
+  }
+
+  assignWarehouse() {
+    if (this.selectedWarehouseId) {
+      this.orderService.assignDcAndWarehouse(this.orderId, this.dcId, this.selectedWarehouseId).subscribe({
+        next: () => {
+          this.statusMessage = 'Warehouse successfully assigned.';
+        },
+        error: (err) => {
+          this.statusMessage = 'Error assigning warehouse: ' + err.message;
+        }
+      });
+    } else {
+      this.statusMessage = 'Please select a warehouse.';
+    }
+  }
+}
