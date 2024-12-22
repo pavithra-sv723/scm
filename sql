@@ -12,7 +12,23 @@ HAVING COUNT(oi.vehicle_id) = (
 )
 AND MIN(COUNT(i.vin) >= SUM(oi.quantity)) = 1; give sample output 
 
-
+SELECT w.warehouse_id
+FROM warehouse w
+JOIN inventory i ON w.warehouse_id = i.warehouse_id
+JOIN order_items oi ON oi.vehicle_id = i.vehicle_id
+WHERE w.dc_id = :specifiedDcId
+  AND oi.order_id = :orderId
+GROUP BY w.warehouse_id
+HAVING COUNT(oi.vehicle_id) = (
+    SELECT COUNT(oi_inner.vehicle_id)
+    FROM order_items oi_inner
+    WHERE oi_inner.order_id = :orderId
+)
+AND SUM(i.quantity) >= (
+    SELECT SUM(oi_inner.quantity)
+    FROM order_items oi_inner
+    WHERE oi_inner.order_id = :orderId
+);
 
 
 
