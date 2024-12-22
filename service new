@@ -1,0 +1,29 @@
+@Repository
+public interface InventoryRepository extends JpaRepository<Inventory, Long> {
+
+    @Query("SELECT new com.example.dto.WarehouseDTO(w.warehouseId, w.name, w.address, w.capacity) " +
+           "FROM Warehouse w " +
+           "JOIN Inventory i ON w.warehouseId = i.warehouseId " +
+           "JOIN OrderItems oi ON oi.vehicleId = i.vehicleId " +
+           "WHERE w.dcId = :specifiedDcId AND oi.orderId = :orderId " +
+           "GROUP BY w.warehouseId " +
+           "HAVING COUNT(DISTINCT oi.vehicleId) = (" +
+           "    SELECT COUNT(DISTINCT oi_inner.vehicleId) " +
+           "    FROM OrderItems oi_inner " +
+           "    WHERE oi_inner.orderId = :orderId " +
+           ")")
+    List<WarehouseDTO> findWarehousesInSpecifiedDc(@Param("specifiedDcId") Long specifiedDcId, @Param("orderId") Long orderId);
+
+    @Query("SELECT new com.example.dto.WarehouseDTO(w.warehouseId, w.name, w.address, w.capacity) " +
+           "FROM Warehouse w " +
+           "JOIN Inventory i ON w.warehouseId = i.warehouseId " +
+           "JOIN OrderItems oi ON oi.vehicleId = i.vehicleId " +
+           "WHERE oi.orderId = :orderId " +
+           "GROUP BY w.dcId, w.warehouseId " +
+           "HAVING COUNT(DISTINCT oi.vehicleId) = (" +
+           "    SELECT COUNT(DISTINCT oi_inner.vehicleId) " +
+           "    FROM OrderItems oi_inner " +
+           "    WHERE oi_inner.orderId = :orderId " +
+           ")")
+    List<WarehouseDTO> findWarehousesInAnyDc(@Param("orderId") Long orderId);
+}
