@@ -30,6 +30,27 @@ AND SUM(i.quantity) >= (
     WHERE oi_inner.order_id = :orderId
 );
 
+SELECT w.warehouse_id
+FROM warehouse w
+WHERE w.dc_id = :specifiedDcId
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_items oi
+      WHERE oi.order_id = :orderId
+        AND NOT EXISTS (
+            SELECT 1
+            FROM inventory i
+            WHERE i.warehouse_id = w.warehouse_id
+              AND i.vehicle_id = oi.vehicle_id
+              AND (
+                  SELECT COUNT(vin)
+                  FROM inventory vin_sub
+                  WHERE vin_sub.warehouse_id = i.warehouse_id
+                    AND vin_sub.vehicle_id = oi.vehicle_id
+              ) >= oi.quantity
+        )
+  )
+LIMIT 1;
 
 
 
