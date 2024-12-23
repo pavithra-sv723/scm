@@ -1,0 +1,92 @@
+If the frontend sends null for the DistributionCenter in the UserDto, and you still want the User to be inserted with a null DistributionCenter, you can handle this case in your backend logic.
+
+Here’s how you can modify the backend logic to support this scenario:
+
+1. Modify the Backend to Handle null DistributionCenter:
+
+If the DistributionCenter is sent as null from the frontend, you can either set the User’s distributionCenter field to null or use a default DistributionCenter. If no default DistributionCenter exists, just allow null as the valid state for the distributionCenter field.
+
+Updated Service Logic:
+
+@Transactional
+public void saveUser(UserDto userDto) {
+    // If DistributionCenter is not sent (is null), assign null to the User's distributionCenter field
+    DistributionCenter distributionCenter = userDto.getDistributionCenter() != null 
+        ? distributionCenterRepository.findById(userDto.getDistributionCenter().getId())
+                .orElseThrow(() -> new EntityNotFoundException("Distribution Center not found"))
+        : null;
+
+    // Create a new User object and set its attributes
+    User user = new User();
+    user.setName(userDto.getName());
+    user.setDistributionCenter(distributionCenter);
+
+    // Save the user to the database
+    userRepository.save(user);
+}
+
+Explanation of the Changes:
+	1.	Check for null DistributionCenter:
+	•	If the frontend sends a null for the DistributionCenter, the backend assigns null to the User’s distributionCenter field.
+	•	If the frontend sends a valid DistributionCenter, it is fetched from the repository using its ID.
+	2.	Create and Save the User:
+	•	A new User object is created, and its attributes (name and distributionCenter) are set based on the UserDto sent from the frontend.
+	•	The User is then saved to the repository.
+
+2. Handle the UserDto Object:
+
+Ensure that the UserDto is designed to accept a null value for DistributionCenter:
+
+public class UserDto {
+    private String name;
+    private DistributionCenter distributionCenter;  // Can be null if not provided
+
+    // getters and setters
+}
+
+3. User Entity with null for DistributionCenter:
+
+Ensure that the User entity allows null values for the distributionCenter field (which is the default behavior for a ManyToOne association unless otherwise constrained).
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "distribution_center_id", nullable = true)
+    private DistributionCenter distributionCenter;  // Can be null
+
+    // getters and setters
+}
+
+4. Saving the User Without DistributionCenter:
+
+If the frontend sends null for the DistributionCenter, this backend logic will save the User with a null DistributionCenter. This means that the User entity will be persisted without being associated with any DistributionCenter, and no exception will be thrown.
+
+5. Optional: Provide a Default DistributionCenter:
+
+If you want to assign a default DistributionCenter (e.g., the first DistributionCenter found in the database) when the frontend sends null, you can modify the service logic like this:
+
+@Transactional
+public void saveUser(UserDto userDto) {
+    DistributionCenter distributionCenter = userDto.getDistributionCenter() != null 
+        ? distributionCenterRepository.findById(userDto.getDistributionCenter().getId())
+                .orElseThrow(() -> new EntityNotFoundException("Distribution Center not found"))
+        : distributionCenterRepository.findAll().stream().findFirst()
+            .orElseThrow(() -> new EntityNotFoundException("No Distribution Center available"));
+
+    // Create and save the User
+    User user = new User();
+    user.setName(userDto.getName());
+    user.setDistributionCenter(distributionCenter);
+    userRepository.save(user);
+}
+
+6. Summary:
+	•	If the frontend sends null for the DistributionCenter, the User will be saved without associating any DistributionCenter.
+	•	If the frontend provides a valid DistributionCenter, the backend will check its existence and associate it with the User.
+	•	This solution allows the User insertion to happen either way, whether or not a DistributionCenter is provided by the frontend.
