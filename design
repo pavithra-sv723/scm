@@ -1,0 +1,239 @@
+Here’s a guide for implementing the Angular app frontend with a main navbar, a sidebar, and a dynamic content area on the right side that renders components based on sidebar clicks.
+
+---
+
+### **Project Structure**
+
+Here’s a high-level folder structure for the Angular app:
+
+```
+src/
+  app/
+    components/
+      navbar/
+      sidebar/
+    pages/
+      orders/
+      warehouses/
+      transfer-dc/
+    app.component.ts
+    app.module.ts
+    app-routing.module.ts
+```
+
+---
+
+### **Code Implementation**
+
+#### 1. **App Component (Main Layout)**
+
+##### `app.component.html`
+```html
+<div class="app-container">
+  <!-- Navbar -->
+  <app-navbar></app-navbar>
+
+  <div class="content-container">
+    <!-- Sidebar -->
+    <app-sidebar></app-sidebar>
+
+    <!-- Main Content Area -->
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>
+```
+
+##### `app.component.css`
+```css
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.content-container {
+  display: flex;
+  flex: 1;
+}
+
+app-sidebar {
+  width: 250px;
+  background-color: #f4f4f4;
+  border-right: 1px solid #ddd;
+}
+
+.content {
+  flex: 1;
+  padding: 20px;
+  background-color: #fff;
+}
+```
+
+---
+
+#### 2. **Navbar Component**
+
+##### `navbar.component.html`
+```html
+<nav class="navbar">
+  <span class="brand">Warehouse Management</span>
+</nav>
+```
+
+##### `navbar.component.css`
+```css
+.navbar {
+  height: 60px;
+  background-color: #007bff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+```
+
+---
+
+#### 3. **Sidebar Component**
+
+##### `sidebar.component.html`
+```html
+<ul class="sidebar-menu">
+  <li>
+    <a routerLink="/orders" routerLinkActive="active">Orders</a>
+  </li>
+  <li>
+    <a routerLink="/warehouses" routerLinkActive="active">Warehouses</a>
+  </li>
+  <li>
+    <a routerLink="/transfer-dc" routerLinkActive="active">Transfer DC</a>
+  </li>
+</ul>
+```
+
+##### `sidebar.component.css`
+```css
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li {
+  margin: 10px 0;
+}
+
+.sidebar-menu a {
+  text-decoration: none;
+  color: #333;
+  padding: 10px 20px;
+  display: block;
+  border-radius: 4px;
+}
+
+.sidebar-menu a:hover,
+.sidebar-menu a.active {
+  background-color: #007bff;
+  color: #fff;
+}
+```
+
+---
+
+#### 4. **Pages**
+
+Create components for `Orders`, `Warehouses`, and `Transfer DC`.
+
+##### Example: Orders Page (`orders.component.ts`)
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-orders',
+  template: `<h2>Orders Management</h2>`,
+  styles: [
+    `
+      h2 {
+        color: #333;
+      }
+    `,
+  ],
+})
+export class OrdersComponent {}
+```
+
+---
+
+#### 5. **Routing**
+
+##### `app-routing.module.ts`
+```typescript
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { OrdersComponent } from './pages/orders/orders.component';
+import { WarehousesComponent } from './pages/warehouses/warehouses.component';
+import { TransferDcComponent } from './pages/transfer-dc/transfer-dc.component';
+
+const routes: Routes = [
+  { path: 'orders', component: OrdersComponent },
+  { path: 'warehouses', component: WarehousesComponent },
+  { path: 'transfer-dc', component: TransferDcComponent },
+  { path: '', redirectTo: '/orders', pathMatch: 'full' }, // Default route
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+---
+
+#### 6. **App Module**
+
+##### `app.module.ts`
+```typescript
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { NavbarComponent } from './components/navbar/navbar.component';
+import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { OrdersComponent } from './pages/orders/orders.component';
+import { WarehousesComponent } from './pages/warehouses/warehouses.component';
+import { TransferDcComponent } from './pages/transfer-dc/transfer-dc.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    NavbarComponent,
+    SidebarComponent,
+    OrdersComponent,
+    WarehousesComponent,
+    TransferDcComponent,
+  ],
+  imports: [BrowserModule, AppRoutingModule],
+  providers: [],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+```
+
+---
+
+### **How It Works**
+
+1. **Navbar:** Always visible at the top of the app, displays the app title.
+2. **Sidebar:** Contains navigation links to the different features (`Orders`, `Warehouses`, `Transfer DC`).
+3. **Dynamic Content:**
+   - Clicking a sidebar link updates the URL (e.g., `/orders`).
+   - The corresponding component (`OrdersComponent`, `WarehousesComponent`, etc.) is rendered in the right content area via `router-outlet`.
+
+---
+
+This structure allows for easy scalability, where you can add more sidebar options and corresponding components as needed.
