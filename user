@@ -1,0 +1,300 @@
+Here’s a complete implementation of the frontend and backend for a user registration system with role-based conditional display of distribution center (DC) and warehouse options.
+
+Backend Implementation
+
+User Entity
+
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String email;
+    private String role;
+
+    @ManyToOne
+    @JoinColumn(name = "dc_id", nullable = true)
+    private DistributionCenter distributionCenter;
+
+    @ManyToOne
+    @JoinColumn(name = "warehouse_id", nullable = true)
+    private Warehouse warehouse;
+
+    // Getters and Setters
+}
+
+Distribution Center Entity
+
+@Entity
+public class DistributionCenter {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String location;
+
+    // Getters and Setters
+}
+
+Warehouse Entity
+
+@Entity
+public class Warehouse {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String location;
+
+    @ManyToOne
+    @JoinColumn(name = "dc_id", nullable = false)
+    private DistributionCenter distributionCenter;
+
+    // Getters and Setters
+}
+
+UserDTO
+
+public class UserDTO {
+
+    private String name;
+    private String email;
+    private String role;
+    private Long dcId;
+    private Long warehouseId;
+
+    // Getters and Setters
+}
+
+UserRepository
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+}
+
+DistributionCenterRepository
+
+@Repository
+public interface DistributionCenterRepository extends JpaRepository<DistributionCenter, Long> {
+}
+
+WarehouseRepository
+
+@Repository
+public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
+}
+
+UserService
+
+public interface UserService {
+    User addUser(UserDTO userDTO);
+}
+
+UserServiceImpl
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private DistributionCenterRepository distributionCenterRepository;
+
+    @Autowired
+    private WarehouseRepository warehouseRepository;
+
+    @Override
+    @Transactional
+    public User addUser(UserDTO userDTO) {
+        User user = new User();
+        user.setName(userDTO.getName());
+        user.setEmail(userDTO.getEmail());
+        user.setRole(userDTO.getRole());
+
+        // Assign DC if applicable
+        if ("DcManager".equals(userDTO.getRole()) && userDTO.getDcId() != null) {
+            DistributionCenter dc = distributionCenterRepository.findById(userDTO.getDcId())
+                .orElseThrow(() -> new EntityNotFoundException("Distribution Center not found with ID: " + userDTO.getDcId()));
+            user.setDistributionCenter(dc);
+        }
+
+        // Assign Warehouse if applicable
+        if ("InventoryManager".equals(userDTO.getRole()) && userDTO.getWarehouseId() != null) {
+            Warehouse warehouse = warehouseRepository.findById(userDTO.getWarehouseId())
+                .orElseThrow(() -> new EntityNotFoundException("Warehouse not found with ID: " + userDTO.getWarehouseId()));
+            user.setWarehouse(warehouse);
+        }
+
+        return userRepository.save(user);
+    }
+}
+
+UserController
+
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping
+    public ResponseEntity<User> addUser(@RequestBody UserDTO userDTO) {
+        User user = userService.addUser(userDTO);
+        return new ResponseEntity<>(user, HttpStatus.CREATED);
+    }
+}
+
+Frontend Implementation
+
+Angular Components
+
+User Registration Component
+
+HTML
+
+<div class="container">
+  <h2>User Registration</h2>
+  <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label for="name">Name:</label>
+      <input formControlName="name" id="name" class="form-control" placeholder="Enter name" />
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email:</label>
+      <input formControlName="email" id="email" class="form-control" placeholder="Enter email" />
+    </div>
+
+    <div class="form-group">
+      <label for="role">Role:</label>
+      <select formControlName="role" id="role" class="form-control" (change)="onRoleChange($event)">
+        <option value="Admin">Admin</option>
+        <option value="Dealer">Dealer</option>
+        <option value="DcManager">DC Manager</option>
+        <option value="InventoryManager">Inventory Manager</option>
+      </select>
+    </div>
+
+    <div *ngIf="showDcField" class="form-group">
+      <label for="dcId">Distribution Center:</label>
+      <select formControlName="dcId" id="dcId" class="form-control">
+        <option *ngFor="let dc of distributionCenters" [value]="dc.id">{{ dc.name }}</option>
+      </select>
+    </div>
+
+    <div *ngIf="showWarehouseField" class="form-group">
+      <label for="warehouseId">Warehouse:</label>
+      <select formControlName="warehouseId" id="warehouseId" class="form-control">
+        <option *ngFor="let warehouse of warehouses" [value]="warehouse.id">{{ warehouse.name }}</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Register</button>
+  </form>
+</div>
+
+TypeScript
+
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { UserService } from '../services/user.service';
+
+@Component({
+  selector: 'app-user-registration',
+  templateUrl: './user-registration.component.html',
+  styleUrls: ['./user-registration.component.css'],
+})
+export class UserRegistrationComponent implements OnInit {
+  userForm!: FormGroup;
+  showDcField: boolean = false;
+  showWarehouseField: boolean = false;
+  distributionCenters: any[] = [];
+  warehouses: any[] = [];
+
+  constructor(private fb: FormBuilder, private userService: UserService) {}
+
+  ngOnInit(): void {
+    this.userForm = this.fb.group({
+      name: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      role: ['', Validators.required],
+      dcId: [null],
+      warehouseId: [null],
+    });
+
+    this.loadDistributionCenters();
+    this.loadWarehouses();
+  }
+
+  loadDistributionCenters() {
+    this.userService.getDistributionCenters().subscribe((data) => {
+      this.distributionCenters = data;
+    });
+  }
+
+  loadWarehouses() {
+    this.userService.getWarehouses().subscribe((data) => {
+      this.warehouses = data;
+    });
+  }
+
+  onRoleChange(event: any) {
+    const role = event.target.value;
+    this.showDcField = role === 'DcManager';
+    this.showWarehouseField = role === 'InventoryManager';
+    if (!this.showDcField) this.userForm.get('dcId')?.reset();
+    if (!this.showWarehouseField) this.userForm.get('warehouseId')?.reset();
+  }
+
+  onSubmit() {
+    if (this.userForm.valid) {
+      this.userService.addUser(this.userForm.value).subscribe(
+        (response) => {
+          alert('User registered successfully!');
+          this.userForm.reset();
+        },
+        (error) => {
+          alert('Error occurred while registering the user.');
+        }
+      );
+    }
+  }
+}
+
+User Service
+
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class UserService {
+  private apiBaseUrl = 'http://localhost:8080/api';
+
+  constructor(private http: HttpClient) {}
+
+  getDistributionCenters(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/distribution-centers`);
+  }
+
+  getWarehouses(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/warehouses`);
+  }
+
+  addUser(user: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseUrl}/users`, user);
+  }
+}
+
+This implementation includes a fully functional backend and frontend for registering users with conditional form fields based on their role.
